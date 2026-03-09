@@ -1,38 +1,32 @@
-import React, { useContext, useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Search,
-  X,
-  Clock,
-  TrendingUp,
-  Tag,
-  Package,
-  Loader,
-} from "lucide-react";
+import { useSelector, useDispatch } from "react-redux";
+import { setActiveCategory } from "../store/slices/productsSlice";
+import { Search, X, Clock, TrendingUp, Tag, Package, Loader } from "lucide-react";
 import logo from "../assets/juicemaxLogo-1.svg";
 
 const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const { all: allProducts, categories } = useSelector(s => s.products);
+
   const [showContent, setShowContent] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
 
   const searchInputRef = useRef(null);
   const modelRef = useRef(null);
-  const api = "a";
-  const public_key = "a";
 
+  // Load recent searches
   useEffect(() => {
-    const savedSearches = localStorage.getItem("recentSearches");
-    if (savedSearches) {
-      setRecentSearches(JSON.parse(savedSearches));
-    }
+    const saved = localStorage.getItem("recentSearches");
+    if (saved) setRecentSearches(JSON.parse(saved));
   }, []);
 
-  // Handle showing content after transition
+  // Show content after open animation
   useEffect(() => {
     let timeout;
     if (searchModelforMobile) {
@@ -48,363 +42,295 @@ const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
     return () => clearTimeout(timeout);
   }, [searchModelforMobile]);
 
-  // Handle outside click
+  // Outside click
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modelRef.current && !modelRef.current.contains(event.target)) {
+    const handleClickOutside = (e) => {
+      if (modelRef.current && !modelRef.current.contains(e.target)) {
         set_searchModelforMobile(false);
       }
     };
-
     if (searchModelforMobile) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("touchstart", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [searchModelforMobile, set_searchModelforMobile]);
 
-  // Debounced search
+  // Debounced search — NO history save here
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (searchQuery.trim()) {
         performSearch(searchQuery);
       } else {
         setSearchResults([]);
-        setSuggestions([]);
       }
     }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, allProducts]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
+  // ── Search: frontend first, backend fallback ──
   const performSearch = async (query) => {
-    if (!query.trim()) return;
+    const q = query.toLowerCase();
+
+    if (allProducts.length > 0) {
+      const results = allProducts.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q)
+      ).slice(0, 8);
+      setSearchResults(results);
+      return; // skip backend
+    }
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${api}/user/search?query=${encodeURIComponent(query)}&limit=8`,
-        {
-          headers: {
-            "x-api-key": public_key,
-          },
-        },
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/search?query=${encodeURIComponent(query)}&limit=8`,
+        { headers: { "x-api-key": import.meta.env.VITE_API_KEY } }
       );
-      const result = await response.json();
-
+      const result = await res.json();
       if (result.success) {
         setSearchResults(Array.isArray(result.products) ? result.products : []);
-        setSuggestions(
-          Array.isArray(result.suggestions) ? result.suggestions : [],
-        );
-        addToRecentSearches(query);
       }
-    } catch (error) {
-      console.error("Search failed:", error);
+    } catch (err) {
+      console.error("Search failed:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Save history only on intentional actions ──
   const addToRecentSearches = (query) => {
-    const newRecentSearches = [
-      query,
-      ...recentSearches.filter((item) => item !== query),
-    ].slice(0, 5); // Keep only 5 most recent
-
-    setRecentSearches(newRecentSearches);
-    localStorage.setItem("recentSearches", JSON.stringify(newRecentSearches));
+    if (!query.trim()) return;
+    const updated = [query, ...recentSearches.filter(i => i !== query)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem("recentSearches", JSON.stringify(updated));
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setSearchQuery(suggestion.text || suggestion);
-    searchInputRef.current?.focus();
-  };
-
-  const handleProductClick = (product) => {
-    set_searchModelforMobile(false);
-    navigate(`/product/${product._id}`);
-  };
-
+  // ── Handlers ──
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      addToRecentSearches(searchQuery.trim()); // ✅ save on submit
       set_searchModelforMobile(false);
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
 
+  const handleProductClick = (product) => {
+    addToRecentSearches(searchQuery.trim()); // ✅ save on product click
+    set_searchModelforMobile(false);
+    navigate(`/product/${product.id}`);
+  };
+
+  const handleRecentClick = (search) => {
+    addToRecentSearches(search); // ✅ save on recent click
+    setSearchQuery(search);
+    searchInputRef.current?.focus();
+  };
+const handleCategoryClick = (catName) => {
+  set_searchModelforMobile(false);
+  navigate(`/items?category=${encodeURIComponent(catName)}`);
+};
+
   const clearSearch = () => {
     setSearchQuery("");
     setSearchResults([]);
-    setSuggestions([]);
     searchInputRef.current?.focus();
   };
 
-  const getSuggestionIcon = (type) => {
-    switch (type) {
-      case "product":
-        return <Package size={16} />;
-      case "category":
-        return <Tag size={16} />;
-      case "trending":
-        return <TrendingUp size={16} />;
-      default:
-        return <Search size={16} />;
-    }
+  const removeRecentSearch = (e, search) => {
+    e.stopPropagation();
+    const updated = recentSearches.filter(i => i !== search);
+    setRecentSearches(updated);
+    localStorage.setItem("recentSearches", JSON.stringify(updated));
   };
 
   return (
-    <>
-      {/* Search Model */}
+    <div
+      ref={modelRef}
+      onClick={(e) => e.stopPropagation()}
+      className={`${
+        searchModelforMobile
+          ? "w-full sm:w-[35%] lg:w-[29%] opacity-100"
+          : "w-0 opacity-0"
+      } h-full bg-white fixed z-50 top-0 left-0 transition-all duration-300 ease-in-out overflow-hidden text-xs`}
+    >
+      {/* BG Logo */}
       <div
-        ref={modelRef}
-        onClick={(e) => e.stopPropagation()}
-        className={`${
-          searchModelforMobile
-            ? "w-full sm:w-[35%] lg:w-[29%] opacity-100"
-            : "w-0 opacity-0"
-        } h-full bg-white fixed z-50 top-0 left-0 transition-all duration-300 ease-in-out overflow-hidden text-xs`}
-      >
-        <div className="h-[92%] z-50 relative">
-          <div
-            className="absolute h-full w-full bg-contain bg-center bg-no-repeat pointer-events-none"
-            style={{
-              backgroundImage: `url(${logo})`,
-              opacity: 0.08,
-            }}
-          />
+        className="absolute inset-0 bg-contain bg-center bg-no-repeat pointer-events-none"
+        style={{ backgroundImage: `url(${logo})`, opacity: 0.08 }}
+      />
 
-          {showContent && (
-            <div className="h-full flex flex-col">
-              {/* Header */}
-              <div className={`p-4 border-b `}>
-                <div className="flex items-center gap-3 z-50">
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log("ko");
-                      set_searchModelforMobile(false);
-                    }}
-                    className="p-2 rounded-lg cursor-pointer hover:bg-neutral-100 transition-colors"
-                  >
-                    <X size={20} />
-                  </div>
+      {/* Main Content */}
+      <div className="h-[92%] relative z-10 flex flex-col">
+        {showContent && (
+          <div className="h-full flex flex-col">
 
-                  {/* Search Input */}
-                  <form
-                    onSubmit={handleSearchSubmit}
-                    className="flex-1 relative"
-                  >
-                    <div className="relative">
-                      <Search
-                        size={20}
-                        className={`absolute left-3 top-1/2 transform -translate-y-1/2 
-                      
-                        `}
-                      />
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder="Search products, categories..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`w-full pl-10 pr-10 py-3 rounded-lg border
-                       
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                      />
-                      {searchQuery && (
-                        <button
-                          type="button"
-                          onClick={clearSearch}
-                          className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded 
-                         
-                          `}
-                        >
-                          <X size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </form>
+            {/* Header */}
+            <div className="p-4 border-b border-neutral-100">
+              <div className="flex items-center gap-3">
+                <div
+                  onClick={(e) => { e.stopPropagation(); set_searchModelforMobile(false); }}
+                  className="p-2 rounded-lg cursor-pointer hover:bg-neutral-100 transition-colors flex-shrink-0"
+                >
+                  <X size={20} />
                 </div>
-              </div>
-
-              {/* Search Content */}
-              <div className={`flex-1 overflow-y-auto `}>
-                {/* Loading State */}
-                {loading && (
-                  <div className="p-4 text-center">
-                    <div className=" text-blue-500 mx-auto animate-spin w-fit">
-                      <Loader />
-                    </div>
-                    <p
-                      className={`mt-2 text-sm ${
-                        theme === "dark" ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
-                      Searching...
-                    </p>
-                  </div>
-                )}
-
-                {/* Search Results */}
-                {!loading && searchQuery && (
-                  <>
-                    {/* Products Results */}
-                    {searchResults.length > 0 && (
-                      <div className="p-4">
-                        <h3
-                          className={`text-xs font-semibold mb-3 ${
-                            theme === "dark" ? "text-gray-300" : "text-gray-700"
-                          }`}
-                        >
-                          Products ({searchResults.length})
-                        </h3>
-                        <div className="space-y-2">
-                          {searchResults.map((product) => (
-                            <button
-                              key={product._id}
-                              onClick={() => handleProductClick(product)}
-                              className={`w-full text-left p-3 rounded-lg transition-colors ${
-                                theme === "dark"
-                                  ? "hover:bg-gray-700 text-gray-300"
-                                  : "hover:bg-white text-gray-700 border border-gray-200"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                {product.images?.[0] && (
-                                  <img
-                                    src={product.images[0].url}
-                                    alt={product.name}
-                                    className="w-10 h-10 object-cover rounded"
-                                  />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">
-                                    {product.name}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-sm font-bold text-green-600">
-                                      Rs {product.price.toFixed(2)}
-                                    </span>
-                                    {product.discount > 0 && (
-                                      <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
-                                        {product.discount}% OFF
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Suggestions */}
-                    {suggestions.length > 0 && (
-                      <div className="p-4 border-t border-gray-200 dark:border-gray-600">
-                        <h3
-                          className={`text-sm font-semibold mb-3 ${
-                            theme === "dark" ? "text-gray-300" : "text-gray-700"
-                          }`}
-                        >
-                          Related Searches
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {suggestions.map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleSuggestionClick(suggestion)}
-                              className={`inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm transition-colors ${
-                                theme === "dark"
-                                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                              }`}
-                            >
-                              {getSuggestionIcon(suggestion.type)}
-                              {suggestion.text}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* No Results */}
-                    {searchResults.length === 0 && suggestions.length === 0 && (
-                      <div className="p-8 text-center">
-                        <Search
-                          size={48}
-                          className={`mx-auto mb-4 
-                            
-                          `}
-                        />
-                        <h3
-                          className={`text-lg font-semibold mb-2
-                          
-                          `}
-                        >
-                          No results found
-                        </h3>
-                        <p
-                          className={`text-sm 
-                           
-                          
-                          `}
-                        >
-                          Try different keywords or check out trending searches
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Recent & Trending Searches */}
-                {!loading && !searchQuery && (
-                  <div className="p-4">
-                    {/* Recent Searches */}
-                    {recentSearches.length > 0 && (
-                      <div className="mb-6">
-                        <h3 className={`text-sm font-semibold mb-3 `}>
-                          Recent Searches
-                        </h3>
-                        <div className="space-y-1">
-                          {recentSearches.map((search, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleSuggestionClick(search)}
-                              className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 
-                             
-                              `}
-                            >
-                              <Clock size={16} className="text-gray-400" />
-                              <span>{search}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                <form onSubmit={handleSearchSubmit} className="flex-1">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Search juices, shakes..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e22d2c]/30 focus:border-[#e22d2c]"
+                    />
+                    {searchQuery && (
+                      <button type="button" onClick={clearSearch}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-[#e22d2c]">
+                        <X size={14} />
+                      </button>
                     )}
                   </div>
-                )}
+                </form>
               </div>
             </div>
-          )}
-        </div>
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            set_searchModelforMobile(false);
-          }}
-          className="h-[7%] border-t border-black/20 p-1 flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors"
-        >
-          <p className="text-sm font-semibold text-[#e22d2c]">Cancel</p>
-        </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto">
+
+              {/* Loading */}
+              {loading && (
+                <div className="p-6 text-center">
+                  <Loader className="animate-spin text-[#e22d2c] mx-auto" size={22} />
+                  <p className="mt-2 text-neutral-500 text-xs">Searching...</p>
+                </div>
+              )}
+
+              {/* Search Results */}
+              {!loading && searchQuery && (
+                <>
+                  {searchResults.length > 0 ? (
+                    <div className="p-3">
+                      <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 px-1">
+                        Results ({searchResults.length})
+                      </p>
+                      <div className="space-y-1">
+                        {searchResults.map(product => (
+                          <button
+                            key={product.id}
+                            onClick={() => handleProductClick(product)}
+                            className="w-full text-left p-2.5 rounded-xl hover:bg-neutral-50 border border-neutral-100 transition-colors flex items-center gap-3"
+                          >
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-neutral-900 truncate">{product.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs font-black text-[#e22d2c]">Rs {product.price}</span>
+                                <span className="text-[10px] text-neutral-400">{product.category}</span>
+                              </div>
+                            </div>
+                            {product.isBestSeller && (
+                              <span className="text-[9px] bg-[#e22d2c]/10 text-[#e22d2c] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                🔥 Top
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Search size={40} className="mx-auto mb-3 text-neutral-300" />
+                      <p className="font-semibold text-neutral-700 text-sm">No results found</p>
+                      <p className="text-neutral-400 text-xs mt-1">Try a different keyword</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Default State */}
+              {!loading && !searchQuery && (
+                <div className="p-3 flex flex-col gap-5">
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Recent</p>
+                        <button
+                          onClick={() => {
+                            setRecentSearches([]);
+                            localStorage.removeItem("recentSearches");
+                          }}
+                          className="text-[10px] text-[#e22d2c] font-semibold hover:underline"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                      <div className="space-y-1">
+                        {recentSearches.map((search, i) => (
+                          <button
+                            key={i}
+                            onClick={() => handleRecentClick(search)}
+                            className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-neutral-50 flex items-center gap-3 transition-colors group"
+                          >
+                            <Clock size={14} className="text-neutral-400 flex-shrink-0" />
+                            <span className="text-sm text-neutral-700 flex-1">{search}</span>
+                            <span
+                              onClick={(e) => removeRecentSearch(e, search)}
+                              className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-[#e22d2c] transition-all"
+                            >
+                              <X size={12} />
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mini Categories */}
+                  <div>
+                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 px-1">
+                      Browse Categories
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {categories.slice(0, 8).map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => handleCategoryClick(cat.name)}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:border-[#e22d2c] hover:bg-[#e22d2c]/5 hover:text-[#e22d2c] transition-all text-left"
+                        >
+                          <span className="text-base">{cat.icon}</span>
+                          <span className="text-xs font-semibold text-neutral-700 truncate">{cat.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </>
+
+      {/* Cancel */}
+      <div
+        onClick={(e) => { e.stopPropagation(); set_searchModelforMobile(false); }}
+        className="h-[8%] border-t border-neutral-100 flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors"
+      >
+        <p className="text-sm font-semibold text-[#e22d2c]">Cancel</p>
+      </div>
+    </div>
   );
 };
 

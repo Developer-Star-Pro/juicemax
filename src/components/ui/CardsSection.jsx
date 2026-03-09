@@ -1,7 +1,14 @@
 import React from "react";
 import { ShoppingCart, Star, TrendingUp } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { addToCart } from "../../store/slices/cartSlice";
+
 
 const ProductCard = ({ product }) => {
+  const dispatch = useDispatch(); // ← add
+  const navigate = useNavigate();
+
   const discountedPrice =
     product.discount > 0
       ? (product.price - (product.price * product.discount) / 100).toFixed(0)
@@ -10,7 +17,7 @@ const ProductCard = ({ product }) => {
   const isSoldOut = product.stock === 0;
 
   return (
-    <div className="relative rounded sm:rounded-2xl overflow-hidden border border-neutral-100 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+    <div  onClick={() => navigate(`/product/${product.id}`)} className="relative rounded sm:rounded-2xl overflow-hidden border border-neutral-100 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
       {/* Badges */}
       <div className="absolute hidden  top-2 left-2 z-10 sm:flex flex-col gap-1">
         {product.isBestSeller && (
@@ -92,6 +99,10 @@ const ProductCard = ({ product }) => {
         {/* CTA Button */}
         <button
           disabled={isSoldOut}
+          onClick={(e) => {
+            e.stopPropagation(); // ← prevent navigating to detail page
+            dispatch(addToCart(product));
+          }}
           className={`mt-1 hidden w-full sm:flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all duration-200
             ${
               isSoldOut
@@ -121,8 +132,8 @@ const CardsSection = ({ data, heading }) => {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-        {data.map((product) => (
+      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 sm:gap-4">
+        {data?.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

@@ -6,15 +6,17 @@ import { Link } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import { ShoppingCart } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { useSelector } from "react-redux";
 
 const Navbar = ({ searchModelforMobile, set_searchModelforMobile }) => {
   const { themeClasses } = useTheme();
+  const { items } = useSelector(s => s.cart);
+const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
 
   const links = [
     { name: "Home", href: "/" },
-    { name: "Products", href: "/products" },
+    { name: "Products", href: "/items" },
     { name: "About Us", href: "/about" },
-    { name: "Contact", href: "/contact" },
   ];
 
   return (
@@ -50,10 +52,17 @@ const Navbar = ({ searchModelforMobile, set_searchModelforMobile }) => {
           </Link>
         ))}
 
-        {/* Order Now CTA button — uses primary button theme */}
-        <button className="p-2 rounded-full text-neutral-600 hover:text-[#e22d2c] hover:bg-[#e22d2c]/10 active:scale-95 transition-all duration-200 cursor-pointer">
-          <ShoppingCart size={20} />
-        </button>
+        <Link
+  to="/cart"
+  className="relative p-2 rounded-full text-neutral-600 hover:text-[#e22d2c] hover:bg-[#e22d2c]/10 active:scale-95 transition-all duration-200 cursor-pointer"
+>
+  <ShoppingCart size={20} />
+  {totalItems > 0 && (
+    <span className="absolute -top-1 -right-1 bg-[#e22d2c] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+      {totalItems > 99 ? "99+" : totalItems}
+    </span>
+  )}
+</Link>
       </div>
     </div>
   );

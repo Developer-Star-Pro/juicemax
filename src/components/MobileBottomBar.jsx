@@ -37,6 +37,12 @@ const MobileBottomBar = ({ searchModelforMobile, set_searchModelforMobile }) => 
       label: "Cart",
       path: "/cart",
     },
+    {
+  id: "about",
+  icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  label: "About",
+  path: "/about",
+},
   ];
 
   const handletabs = (id, path) => {

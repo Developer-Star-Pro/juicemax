@@ -268,13 +268,17 @@ const ItemsPage = () => {
         </aside>
 
         {/* Mobile Sidebar Drawer */}
+        {/* Mobile Sidebar Drawer */}
         {mobileSidebarOpen && (
           <>
+            {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-black/40 z-40"
+              className="fixed inset-0 bg-black/40 z-40 animate-fadeIn"
               onClick={() => setMobileSidebarOpen(false)}
             />
-            <div className="fixed top-0 left-0 h-full w-64 bg-white z-50 overflow-y-auto shadow-xl">
+
+            {/* Drawer */}
+            <div className="fixed top-0 left-0 h-full w-64 bg-white z-50 overflow-y-auto shadow-2xl animate-slideIn">
               <Sidebar
                 categories={categories}
                 activeCategory={activeCategory}

@@ -8,7 +8,6 @@ import bannerImg1 from "../assets/banner1.svg";
 import CardsSection from "../components/ui/CardsSection";
 import { fetchHomeData } from "../store/slices/homeSlice";
 
-
 // ─── Skeleton Card ───────────────────────────────────────────────
 const SkeletonCard = () => (
   <div className="rounded-2xl overflow-hidden border border-neutral-100 bg-white shadow-sm animate-pulse">
@@ -51,7 +50,9 @@ const Home = () => {
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    dispatch(fetchHomeData());
+    if (bestSellers.length === 0) {
+      dispatch(fetchHomeData());
+    }
   }, [dispatch]);
 
   const pulseAnimation = {

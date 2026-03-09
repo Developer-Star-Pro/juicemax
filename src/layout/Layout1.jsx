@@ -10,7 +10,7 @@ const Layout1 = () => {
   const navigate = useNavigate();
 
   // Define your routes for swipe navigation
-  const routes = ["/", "/items", "/cart", "/profile"];
+  const routes = ["/", "/items", "/cart", "/about"];
   const currentIndex = routes.indexOf(location.pathname);
 
   // Swipe navigation states

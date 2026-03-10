@@ -10,8 +10,8 @@ import { useSelector } from "react-redux";
 
 const Navbar = ({ searchModelforMobile, set_searchModelforMobile }) => {
   const { themeClasses } = useTheme();
-  const { items } = useSelector(s => s.cart);
-const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  const { items } = useSelector((s) => s.cart);
+  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
 
   const links = [
     { name: "Home", href: "/" },
@@ -20,7 +20,7 @@ const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   ];
 
   return (
-    <div className="p-1  bg-white flex items-center justify-between">
+    <div className="px-1 py-2  bg-white flex items-center justify-between ">
       <div>
         <img className="w-25 hidden sm:block" src={logo2} />
         <div className="sm:hidden flex items-center">
@@ -32,10 +32,10 @@ const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
         </div>
       </div>
 
-      <div className="hidden gap-3  sm:flex mr-3">
+      <div className="gap-3  flex mr-3">
         <div
           onClick={() => set_searchModelforMobile(!searchModelforMobile)}
-          className="p-2 rounded-full text-neutral-600 hover:text-[#e22d2c] hover:bg-[#e22d2c]/10 active:scale-95 transition-all duration-200 cursor-pointer"
+          className="p-2 hidden sm:block rounded-full text-neutral-600 hover:text-[#e22d2c] hover:bg-[#e22d2c]/10 active:scale-95 transition-all duration-200 cursor-pointer"
         >
           <Search size={20} />
         </div>
@@ -43,7 +43,7 @@ const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
           <Link
             key={link.name}
             to={link.href}
-            className="relative text-neutral-900 font-semibold text-sm px-4 py-2 rounded-full transition-all duration-200 hover:text-[#e22d2c] hover:bg-[#e22d2c]/8 group"
+            className="relative hidden sm:block text-neutral-900 font-semibold text-sm px-4 py-2 rounded-full transition-all duration-200 hover:text-[#e22d2c] hover:bg-[#e22d2c]/8 group"
           >
             {link.name}
 
@@ -53,16 +53,16 @@ const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
         ))}
 
         <Link
-  to="/cart"
-  className="relative p-2 rounded-full text-neutral-600 hover:text-[#e22d2c] hover:bg-[#e22d2c]/10 active:scale-95 transition-all duration-200 cursor-pointer"
->
-  <ShoppingCart size={20} />
-  {totalItems > 0 && (
-    <span className="absolute -top-1 -right-1 bg-[#e22d2c] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-      {totalItems > 99 ? "99+" : totalItems}
-    </span>
-  )}
-</Link>
+          to="/cart"
+          className="relative p-2 rounded-full text-neutral-600 hover:text-[#e22d2c] hover:bg-[#e22d2c]/10 active:scale-95 transition-all duration-200 cursor-pointer"
+        >
+          <ShoppingCart size={20} />
+          {totalItems > 0 && (
+            <span className="absolute -top-1 -right-1 bg-[#e22d2c] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+              {totalItems > 99 ? "99+" : totalItems}
+            </span>
+          )}
+        </Link>
       </div>
     </div>
   );

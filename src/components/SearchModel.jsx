@@ -2,14 +2,30 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setActiveCategory } from "../store/slices/productsSlice";
-import { Search, X, Clock, TrendingUp, Tag, Package, Loader } from "lucide-react";
+import {
+  Search,
+  X,
+  Clock,
+  TrendingUp,
+  Tag,
+  Package,
+  Loader,
+} from "lucide-react";
 import logo from "../assets/juicemaxLogo-1.svg";
 
 const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { all: allProducts, categories } = useSelector(s => s.products);
+  // In SearchModel.jsx — update this line
+  const { all: allProducts, categories: productCategories } = useSelector(
+    (s) => s.products,
+  );
+  const { categories: homeCategories } = useSelector((s) => s.home);
+
+  // Use whichever has data
+  const categories =
+    productCategories.length > 0 ? productCategories : homeCategories;
 
   const [showContent, setShowContent] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,10 +92,13 @@ const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
     const q = query.toLowerCase();
 
     if (allProducts.length > 0) {
-      const results = allProducts.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
-      ).slice(0, 8);
+      const results = allProducts
+        .filter(
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            p.category.toLowerCase().includes(q),
+        )
+        .slice(0, 8);
       setSearchResults(results);
       return; // skip backend
     }
@@ -88,7 +107,7 @@ const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/search?query=${encodeURIComponent(query)}&limit=8`,
-        { headers: { "x-api-key": import.meta.env.VITE_API_KEY } }
+        { headers: { "x-api-key": import.meta.env.VITE_API_KEY } },
       );
       const result = await res.json();
       if (result.success) {
@@ -104,7 +123,10 @@ const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
   // ── Save history only on intentional actions ──
   const addToRecentSearches = (query) => {
     if (!query.trim()) return;
-    const updated = [query, ...recentSearches.filter(i => i !== query)].slice(0, 5);
+    const updated = [query, ...recentSearches.filter((i) => i !== query)].slice(
+      0,
+      5,
+    );
     setRecentSearches(updated);
     localStorage.setItem("recentSearches", JSON.stringify(updated));
   };
@@ -130,10 +152,10 @@ const SearchModel = ({ searchModelforMobile, set_searchModelforMobile }) => {
     setSearchQuery(search);
     searchInputRef.current?.focus();
   };
-const handleCategoryClick = (catName) => {
-  set_searchModelforMobile(false);
-  navigate(`/items?category=${encodeURIComponent(catName)}`);
-};
+  const handleCategoryClick = (catName) => {
+    set_searchModelforMobile(false);
+    navigate(`/items?category=${encodeURIComponent(catName)}`);
+  };
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -143,7 +165,7 @@ const handleCategoryClick = (catName) => {
 
   const removeRecentSearch = (e, search) => {
     e.stopPropagation();
-    const updated = recentSearches.filter(i => i !== search);
+    const updated = recentSearches.filter((i) => i !== search);
     setRecentSearches(updated);
     localStorage.setItem("recentSearches", JSON.stringify(updated));
   };
@@ -168,19 +190,24 @@ const handleCategoryClick = (catName) => {
       <div className="h-[92%] relative z-10 flex flex-col">
         {showContent && (
           <div className="h-full flex flex-col">
-
             {/* Header */}
             <div className="p-4 border-b border-neutral-100">
               <div className="flex items-center gap-3">
                 <div
-                  onClick={(e) => { e.stopPropagation(); set_searchModelforMobile(false); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    set_searchModelforMobile(false);
+                  }}
                   className="p-2 rounded-lg cursor-pointer hover:bg-neutral-100 transition-colors flex-shrink-0"
                 >
                   <X size={20} />
                 </div>
                 <form onSubmit={handleSearchSubmit} className="flex-1">
                   <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <Search
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                    />
                     <input
                       ref={searchInputRef}
                       type="text"
@@ -190,8 +217,11 @@ const handleCategoryClick = (catName) => {
                       className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e22d2c]/30 focus:border-[#e22d2c]"
                     />
                     {searchQuery && (
-                      <button type="button" onClick={clearSearch}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-[#e22d2c]">
+                      <button
+                        type="button"
+                        onClick={clearSearch}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-[#e22d2c]"
+                      >
                         <X size={14} />
                       </button>
                     )}
@@ -202,11 +232,13 @@ const handleCategoryClick = (catName) => {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
-
               {/* Loading */}
               {loading && (
                 <div className="p-6 text-center">
-                  <Loader className="animate-spin text-[#e22d2c] mx-auto" size={22} />
+                  <Loader
+                    className="animate-spin text-[#e22d2c] mx-auto"
+                    size={22}
+                  />
                   <p className="mt-2 text-neutral-500 text-xs">Searching...</p>
                 </div>
               )}
@@ -220,7 +252,7 @@ const handleCategoryClick = (catName) => {
                         Results ({searchResults.length})
                       </p>
                       <div className="space-y-1">
-                        {searchResults.map(product => (
+                        {searchResults.map((product) => (
                           <button
                             key={product.id}
                             onClick={() => handleProductClick(product)}
@@ -232,10 +264,16 @@ const handleCategoryClick = (catName) => {
                               className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-neutral-900 truncate">{product.name}</p>
+                              <p className="text-sm font-semibold text-neutral-900 truncate">
+                                {product.name}
+                              </p>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs font-black text-[#e22d2c]">Rs {product.price}</span>
-                                <span className="text-[10px] text-neutral-400">{product.category}</span>
+                                <span className="text-xs font-black text-[#e22d2c]">
+                                  Rs {product.price}
+                                </span>
+                                <span className="text-[10px] text-neutral-400">
+                                  {product.category}
+                                </span>
                               </div>
                             </div>
                             {product.isBestSeller && (
@@ -249,9 +287,16 @@ const handleCategoryClick = (catName) => {
                     </div>
                   ) : (
                     <div className="p-8 text-center">
-                      <Search size={40} className="mx-auto mb-3 text-neutral-300" />
-                      <p className="font-semibold text-neutral-700 text-sm">No results found</p>
-                      <p className="text-neutral-400 text-xs mt-1">Try a different keyword</p>
+                      <Search
+                        size={40}
+                        className="mx-auto mb-3 text-neutral-300"
+                      />
+                      <p className="font-semibold text-neutral-700 text-sm">
+                        No results found
+                      </p>
+                      <p className="text-neutral-400 text-xs mt-1">
+                        Try a different keyword
+                      </p>
                     </div>
                   )}
                 </>
@@ -260,12 +305,13 @@ const handleCategoryClick = (catName) => {
               {/* Default State */}
               {!loading && !searchQuery && (
                 <div className="p-3 flex flex-col gap-5">
-
                   {/* Recent Searches */}
                   {recentSearches.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2 px-1">
-                        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Recent</p>
+                        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                          Recent
+                        </p>
                         <button
                           onClick={() => {
                             setRecentSearches([]);
@@ -283,8 +329,13 @@ const handleCategoryClick = (catName) => {
                             onClick={() => handleRecentClick(search)}
                             className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-neutral-50 flex items-center gap-3 transition-colors group"
                           >
-                            <Clock size={14} className="text-neutral-400 flex-shrink-0" />
-                            <span className="text-sm text-neutral-700 flex-1">{search}</span>
+                            <Clock
+                              size={14}
+                              className="text-neutral-400 flex-shrink-0"
+                            />
+                            <span className="text-sm text-neutral-700 flex-1">
+                              {search}
+                            </span>
                             <span
                               onClick={(e) => removeRecentSearch(e, search)}
                               className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-[#e22d2c] transition-all"
@@ -303,19 +354,20 @@ const handleCategoryClick = (catName) => {
                       Browse Categories
                     </p>
                     <div className="grid grid-cols-2 gap-2">
-                      {categories.slice(0, 8).map(cat => (
+                      {categories.slice(0, 8).map((cat) => (
                         <button
                           key={cat.id}
                           onClick={() => handleCategoryClick(cat.name)}
                           className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:border-[#e22d2c] hover:bg-[#e22d2c]/5 hover:text-[#e22d2c] transition-all text-left"
                         >
                           <span className="text-base">{cat.icon}</span>
-                          <span className="text-xs font-semibold text-neutral-700 truncate">{cat.name}</span>
+                          <span className="text-xs font-semibold text-neutral-700 truncate">
+                            {cat.name}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </div>
-
                 </div>
               )}
             </div>
@@ -325,7 +377,10 @@ const handleCategoryClick = (catName) => {
 
       {/* Cancel */}
       <div
-        onClick={(e) => { e.stopPropagation(); set_searchModelforMobile(false); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          set_searchModelforMobile(false);
+        }}
         className="h-[8%] border-t border-neutral-100 flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors"
       >
         <p className="text-sm font-semibold text-[#e22d2c]">Cancel</p>
